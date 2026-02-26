@@ -1,0 +1,42 @@
+[project]
+name = "bethurtadom"
+version = "0.1.0"
+description = "Scanner de discrepancias en apuestas deportivas en vivo usando Playwright y Pydantic"
+authors = [{ name = "shurtado" }]
+dependencies = [
+    "playwright>=1.50.0",
+    "pydantic>=2.10.0",
+    "ruff>=0.9.0",
+    "pytest-asyncio>=0.24.0",
+    "structlog>=24.4.0",
+]
+requires-python = ">=3.14"
+
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+select = [
+    "E",   # Error
+    "F",   # Pyflakes
+    "I",   # Isort
+    "N",   # PEP8-naming
+    "D",   # Pydocstyle
+    "UP",  # Pyupgrade
+    "ANN", # Annotations (Types)
+    "ASYNC", # Async rules
+    "B",   # Bugbear
+    "C4",  # Comprehensions
+    "PT",  # Pytest style
+    "SIM", # Simplify
+    "RET", # Return
+]
+ignore = ["D100", "D101", "D102", "D103", "D104", "ANN101", "ANN102"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
