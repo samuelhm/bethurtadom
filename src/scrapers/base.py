@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from src.models.odds import ScrapedData
+from src.models.odds import MatchInfo, ScrapedData
 
 
 class BaseScraper(ABC):
@@ -20,11 +20,11 @@ class BaseScraper(ABC):
         pass
 
     @abstractmethod
-    async def get_live_matches(self) -> list[ScrapedData]:
+    async def get_live_matches(self) -> list[MatchInfo]:
         """Navega por la sección 'En Vivo' y extrae las cuotas de 'Próximo Gol'.
 
         Returns:
-            List[ScrapedData]: Lista de objetos Pydantic con la información extraída.
+            List[MatchInfo]: Lista de objetos Pydantic con la información básica.
         """
         pass
 

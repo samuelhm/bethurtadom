@@ -4,48 +4,61 @@ import sys
 from dotenv import load_dotenv
 
 from src.core.browser import BrowserManager
+from src.core.logger import logger, setup_logger
 from src.scrapers.winamax import WinamaxScraper
 
+#cada hijo del elemento ReactVirtualized__Grid__innerScrollContainer es un partido en directo, con sus datos dentro de sus hijos (equipos, cuotas, etc)
 
 async def main() -> None:
-    # 0. Cargamos variables de entorno (.env)
     load_dotenv()
-
-    # 1. Creamos el gestor del navegador (Visible para inspección inicial)
-    # Una vez que estemos seguros, cambiaremos a headless=True
+    setup_logger("INFO")
     browser = BrowserManager(headless=False)
-
-    # 2. Creamos el scraper pasándole el gestor
     scraper = WinamaxScraper(browser)
 
     try:
-        print("🚀 Iniciando el motor de Winamax...")
+        logger.info("🚀 Iniciando el motor de Winamax...")
 
-        # 3. Intentamos el login completo
-        if not await scraper.login():
-            print("❌ Error crítico: No se pudo completar el login.")
+        # 1. Iniciamos el navegador y navegamos a la web base
+        if not await scraper.start():
+            logger.error("No se pudo iniciar el scraper.")
             return
 
-        # 4. Bucle principal de monitorización
-        # El programa se quedará "escuchando" cambios hasta que lo pares (Ctrl+C)
-        print("\n📺 MONITORIZACIÓN ACTIVA 📺")
-        print("Tip: Pulsa Ctrl + C para detener el programa de forma segura.")
+        # 2. Navegamos directamente a 'En Vivo' sin loguearnos
+        # Si quisieras loguearte, llamarías a await scraper.login() en su lugar
+        if not await scraper.navigate_to_live():
+            logger.error("No se pudo navegar a la sección en vivo.")
+            return
 
-        # Mantenemos la sesión abierta en la página en vivo hasta interrupción manual
+        logger.info("📺 MONITORIZACIÓN ACTIVA 📺")
+
+        logger.info("Tip: Pulsa Ctrl + C para detener el programa de forma segura.")
+
+        # 4. Obtenemos y mostramos los partidos en vivo
+        matches = await scraper.get_live_matches()
+        
+        if not matches:
+            logger.warning("No se encontraron partidos de fútbol en vivo en este momento.")
+        else:
+            logger.info(f"⚽ Se han encontrado {len(matches)} partidos:")
+            for m in matches:
+                print(f"[{m.minute or '??'}' ] {m.home_team} {m.score_home} - {m.score_away} {m.away_team}")
+                if m.match_url:
+                    print(f"    🔗 {m.match_url}")
+
+        # Mantenemos la sesión abierta por si el usuario quiere inspeccionar
+        if scraper._page:
+            # await scraper._page.pause() # Descomentar para inspeccionar manualmente
+            pass
+            
         await asyncio.Event().wait()
-
-    except KeyboardInterrupt:
-        print("\n🛑 Deteniendo el programa por el usuario...")
     except Exception as e:
-        print(f"\n❌ Error inesperado: {e}")
+        logger.error(f"Error inesperado: {e}")
     finally:
-        # 5. Muy importante: cerramos TODO para no dejar procesos abiertos
-        print("🧹 Limpiando y cerrando pestañas...")
+        logger.info("🧹 Limpiando y cerrando pestañas...")
         await scraper.close()
         await browser.stop()
 
 
 if __name__ == "__main__":
-    # Ajustamos el límite de recursión para evitar problemas en bucles largos
     sys.setrecursionlimit(2000)
     asyncio.run(main())
