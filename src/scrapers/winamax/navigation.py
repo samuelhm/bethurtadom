@@ -10,7 +10,7 @@ async def go_to_live_football(page: Page, base_url: str) -> bool:
         await page.goto(f"{base_url}/live", wait_until="networkidle")
 
         logger.debug("navigation.py: Clicking at (10, 10) to dismiss any overlays")
-        await page.mouse.click(10, 10)
+        await page.mouse.click(50, 10)
 
         logger.debug("navigation.py: Filtering live matches by 'Fútbol'")
         await page.get_by_role("button", name="Fútbol").first.click()

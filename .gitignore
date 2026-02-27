@@ -22,3 +22,4 @@ playwright/.local-browsers/
 .vscode/
 .idea/
 .github/copilot-instructions.md
+.user_data*
