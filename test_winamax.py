@@ -7,24 +7,30 @@ from src.core.browser import BrowserManager
 from src.core.logger import logger, setup_logger
 from src.scrapers.winamax import WinamaxScraper
 
-#cada hijo del elemento ReactVirtualized__Grid__innerScrollContainer es un partido en directo, con sus datos dentro de sus hijos (equipos, cuotas, etc)
+logger.debug("cada hijo del elemento ReactVirtualized__Grid__innerScrollContainer es un partido en directo, con sus datos dentro de sus hijos (equipos, cuotas, etc)")
 
 async def main() -> None:
+    logger.debug("main: Calling load_dotenv() to read environment variables")
     load_dotenv()
+    
+    logger.debug("main: Setting up project logger with 'INFO' level")
     setup_logger("INFO")
+    
+    logger.debug("main: Initializing BrowserManager(headless=False)")
     browser = BrowserManager(headless=False)
+    
+    logger.debug("main: Initializing WinamaxScraper with the browser manager")
     scraper = WinamaxScraper(browser)
 
     try:
         logger.info("🚀 Iniciando el motor de Winamax...")
 
-        # 1. Iniciamos el navegador y navegamos a la web base
+        logger.debug("main: Executing scraper.start() for initial browser setup")
         if not await scraper.start():
             logger.error("No se pudo iniciar el scraper.")
             return
 
-        # 2. Navegamos directamente a 'En Vivo' sin loguearnos
-        # Si quisieras loguearte, llamarías a await scraper.login() en su lugar
+        logger.debug("main: Executing scraper.navigate_to_live() skipping authentication")
         if not await scraper.navigate_to_live():
             logger.error("No se pudo navegar a la sección en vivo.")
             return
@@ -33,7 +39,7 @@ async def main() -> None:
 
         logger.info("Tip: Pulsa Ctrl + C para detener el programa de forma segura.")
 
-        # 4. Obtenemos y mostramos los partidos en vivo
+        logger.debug("main: Calling scraper.get_live_matches() to extract current football data")
         matches = await scraper.get_live_matches()
         
         if not matches:
@@ -45,15 +51,12 @@ async def main() -> None:
                 if m.match_url:
                     print(f"    🔗 {m.match_url}")
 
-        # Mantenemos la sesión abierta por si el usuario quiere inspeccionar
-        if scraper._page:
-            # await scraper._page.pause() # Descomentar para inspeccionar manualmente
-            pass
-            
+        logger.debug("main: Hanging execution with asyncio.Event().wait() to keep session alive")            
         await asyncio.Event().wait()
     except Exception as e:
         logger.error(f"Error inesperado: {e}")
     finally:
+        logger.debug("main: Cleaning up resources with scraper.close() and browser.stop()")
         logger.info("🧹 Limpiando y cerrando pestañas...")
         await scraper.close()
         await browser.stop()

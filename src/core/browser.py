@@ -1,4 +1,5 @@
 from playwright.async_api import Browser, BrowserContext, Page, async_playwright
+from src.core.logger import logger
 
 
 class BrowserManager:
@@ -39,7 +40,7 @@ class BrowserManager:
         if not self._browser:
             raise RuntimeError("No se pudo iniciar el navegador")
 
-        # Creamos un contexto (como una sesión de incógnito nueva cada vez)
+        logger.debug("BrowserManager: Creating new BrowserContext with custom User-Agent and Viewport")
         user_agent = (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
             "AppleWebKit/537.36 (KHTML, like Gecko) "

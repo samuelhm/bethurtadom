@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 from src.core.browser import BrowserManager
 from src.core.logger import logger
@@ -10,7 +11,7 @@ from src.scrapers.winamax.pages import handle_popups
 
 
 class WinamaxScraper(BaseScraper):
-    """Scraper de Winamax modularizado."""
+    logger.debug("Inicializando WinamaxScraper...")
 
     def __init__(self, browser_manager: BrowserManager) -> None:
         self.browser_manager = browser_manager
@@ -19,17 +20,25 @@ class WinamaxScraper(BaseScraper):
         self._username = os.getenv("WINAMAX_USER")
         self._password = os.getenv("WINAMAX_PASS")
         self._birthday = os.getenv("WINAMAX_BIRTHDAY")
+        
+        logger.debug("Cargando script de extracción de partidos desde match_selector.js...")
+        self._js_path = Path(__file__).parent / "match_selector.js"
+        self._selector_script = self._js_path.read_text(encoding="utf-8")
 
     async def start(self) -> bool:
         """Prepara el navegador y navega a la web de Winamax."""
         try:
             if not self._page:
+                logger.debug("WinamaxScraper.start: Requesting new page from BrowserManager")
                 self._page = await self.browser_manager.get_new_page()
 
             logger.info(f"🌐 Navegando a {self._base_url}...")
             await self._page.goto(str(self._base_url), wait_until="load")
+
+            logger.debug("WinamaxScraper.start: Calling handle_popups() to clean UI")
             await handle_popups(self._page)
             return True
+
         except Exception as e:
             logger.error(f"Error al iniciar el scraper: {e}")
             return False
@@ -37,18 +46,20 @@ class WinamaxScraper(BaseScraper):
     async def login(self) -> bool:
         """Realiza el proceso de login (requiere haber llamado a start() antes)."""
         if not self._page:
-            logger.error("Error: No se ha inicializado el navegador. Llama a start() primero.")
+            logger.error("WinamaxScraper.login: Aborting. self._page is None.")
             return False
 
         try:
             if not self._username or not self._password or not self._birthday:
-                logger.error("Faltan credenciales de Winamax en .env")
+                logger.error("WinamaxScraper.login: Aborting. Missing credentials in environment.")
                 return False
 
             logger.info("🔐 Iniciando sesión en Winamax...")
+            logger.debug(f"WinamaxScraper.login: Calling login_winamax() with user={self._username}")
             if not await login_winamax(self._page, self._username, self._password, self._birthday):
                 return False
 
+            logger.debug("WinamaxScraper.login: Calling go_to_live_football() after successful login")
             return await go_to_live_football(self._page, self._base_url)
 
         except Exception as e:
@@ -58,85 +69,29 @@ class WinamaxScraper(BaseScraper):
     async def navigate_to_live(self) -> bool:
         """Navega directamente a la sección en vivo sin loguearse."""
         if not self._page:
-            logger.error("Error: No se ha inicializado el navegador. Llama a start() primero.")
+            logger.error("WinamaxScraper.navigate_to_live: Aborting. self._page is None.")
             return False
+        
+        logger.debug("WinamaxScraper.navigate_to_live: Calling go_to_live_football()")
         return await go_to_live_football(self._page, self._base_url)
 
     async def get_live_matches(self) -> list[MatchInfo]:
-        """Extrae la información básica de los partidos de fútbol en vivo."""
+        """Extrae información de fútbol usando el script JS externo."""
         if not self._page:
+            logger.error("WinamaxScraper.get_live_matches: Aborting. self._page is None.")
             return []
 
         try:
-            container_selector = ".ReactVirtualized__Grid__innerScrollContainer"
-            
-            # Esperamos un poco más a que la red se estabilice tras el filtro
-            await self._page.wait_for_timeout(2000)
-            
-            try:
-                await self._page.wait_for_selector(container_selector, timeout=10000)
-            except Exception:
-                logger.warning("No se encontró el contenedor de la lista virtualizada.")
-                return []
+            logger.debug("WinamaxScraper.get_live_matches: Waiting for '[data-testid^=\"match-card-\"]' selector")
+            await self._page.wait_for_selector('[data-testid^="match-card-"]', timeout=10000)
 
-            # Debug: ¿Cuántos divs hijos hay realmente?
-            num_elements = await self._page.locator(f"{container_selector} > div").count()
-            logger.info(f"Detectados {num_elements} bloques de partidos en el DOM.")
-
+            logger.debug("WinamaxScraper.get_live_matches: Executing eval_on_selector_all with pre-loaded JS script")
             matches_data = await self._page.eval_on_selector_all(
-                f"{container_selector} > div",
-                r"""
-                (elements) => {
-                    return elements.map(el => {
-                        // Nombres de equipos: específicos de fútbol (.sc-gbWBZM)
-                        const teamElements = Array.from(el.querySelectorAll('.sc-gbWBZM'));
-                        if (teamElements.length < 2) return null;
-                        
-                        const homeTeam = teamElements[0].innerText.trim();
-                        const awayTeam = teamElements[1].innerText.trim();
-
-                        // Marcador: específico de fútbol (.sc-iqGQTr)
-                        const scoreElements = Array.from(el.querySelectorAll('.sc-iqGQTr'));
-                        if (scoreElements.length < 2) return null;
-                        
-                        const scoreHome = parseInt(scoreElements[0].innerText) || 0;
-                        const scoreAway = parseInt(scoreElements[1].innerText) || 0;
-
-                        // Tiempo: específico de fútbol (.sc-UoxQT)
-                        const timeElement = el.querySelector('.sc-UoxQT');
-                        let minute = null;
-                        if (timeElement) {
-                            const timeText = timeElement.innerText.trim();
-                            // Usamos regex para capturar los minutos de "28:01", "45:00", etc.
-                            const timeMatch = timeText.match(/(\d+):/);
-                            if (timeMatch) {
-                                minute = parseInt(timeMatch[1]);
-                            } else {
-                                // Si no hay ":", intentamos sacar el número directamente (ej. "45")
-                                minute = parseInt(timeText) || null;
-                            }
-                        }
-
-                        const card = el.querySelector('[data-testid^="match-card-"]');
-                        let matchUrl = null;
-                        if (card) {
-                            const matchId = card.getAttribute('data-testid').replace('match-card-', '');
-                            matchUrl = `https://www.winamax.es/apuestas-deportivas/match/${matchId}`;
-                        }
-
-                        return {
-                            home_team: homeTeam,
-                            away_team: awayTeam,
-                            score_home: scoreHome,
-                            score_away: scoreAway,
-                            minute: minute,
-                            match_url: matchUrl
-                        };
-                    }).filter(m => m !== null);
-                }
-                """
+                '[data-testid^="match-card-"]',
+                self._selector_script
             )
-
+            
+            logger.debug(f"WinamaxScraper.get_live_matches: Mapping {len(matches_data)} items to MatchInfo models")
             return [MatchInfo(**m) for m in matches_data]
 
         except Exception as e:
