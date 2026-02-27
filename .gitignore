@@ -21,3 +21,4 @@ playwright/.local-browsers/
 # IDEs
 .vscode/
 .idea/
+.github/copilot-instructions.md
