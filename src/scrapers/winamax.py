@@ -23,24 +23,31 @@ class WinamaxScraper(BaseScraper):
 
     async def _setup_page(self) -> None:
         """Obtiene una nueva página del gestor de navegación si no existe."""
-        if not self._page:
+        if self._page is None:
             self._page = await self.browser_manager.get_new_page()
+
+    def _require_page(self) -> Page:
+        """Devuelve la página activa o lanza error si no está inicializada."""
+        if self._page is None:
+            raise RuntimeError("Página no inicializada. Llama a login() primero.")
+        return self._page
 
     async def _handle_popups(self) -> None:
         """Busca y cierra el banner de cookies y el modal publicitario."""
+        page = self._require_page()
         try:
             cookie_selector = "#tarteaucitronPersonalize2"
-            await self._page.wait_for_selector(cookie_selector, state="visible", timeout=3000)
-            await self._page.click(cookie_selector)
-            await self._page.wait_for_timeout(1000)
+            await page.wait_for_selector(cookie_selector, state="visible", timeout=3000)
+            await page.click(cookie_selector)
+            await page.wait_for_timeout(1000)
         except Exception:
             pass
 
         try:
             close_modal_selector = "[aria-label='Cerrar']"
-            await self._page.wait_for_selector(close_modal_selector, state="visible", timeout=3000)
-            await self._page.click(close_modal_selector)
-            await self._page.wait_for_timeout(500)
+            await page.wait_for_selector(close_modal_selector, state="visible", timeout=3000)
+            await page.click(close_modal_selector)
+            await page.wait_for_timeout(500)
         except Exception:
             pass
 
@@ -51,17 +58,16 @@ class WinamaxScraper(BaseScraper):
             return False
 
         await self._setup_page()
-        if not self._page:
-            return False
+        page = self._require_page()
             
         print(f"🌐 Navegando a {self._base_url}...")
-        await self._page.goto(self._base_url, wait_until="networkidle")
+        await page.goto(self._base_url, wait_until="networkidle")
         await self._handle_popups()
         
         print("🖱️ Abriendo menú de login...")
         try:
-            await self._page.get_by_text("Conectarse").first.click()
-            await self._page.wait_for_timeout(2000)
+            await page.get_by_text("Conectarse").first.click()
+            await page.wait_for_timeout(2000)
         except Exception as e:
             print(f"❌ Fallo al pulsar Conectarse: {e}")
             return False
@@ -69,7 +75,7 @@ class WinamaxScraper(BaseScraper):
         print("🖼️ Accediendo al Iframe de login...")
         try:
             # 1. Localizamos el Iframe
-            login_frame = self._page.frame_locator('iframe[name="login"]')
+            login_frame = page.frame_locator('iframe[name="login"]')
             
             # 2. Paso 1: Usuario y Contraseña
             print("✍️ Introduciendo Email y Contraseña...")
@@ -81,7 +87,7 @@ class WinamaxScraper(BaseScraper):
             
             # Pulsamos el primer "Conectarse"
             await login_frame.get_by_role("button", name="Conectarse").click()
-            await self._page.wait_for_timeout(2000)
+            await page.wait_for_timeout(2000)
             
             # 3. Paso 2: Fecha de Nacimiento (dentro del mismo Iframe)
             print(f"🎂 Introduciendo fecha de nacimiento: {self._birthday}")
@@ -100,7 +106,7 @@ class WinamaxScraper(BaseScraper):
             await login_frame.get_by_role("button", name="Conectarse").click()
             
             # Esperamos a que el login procese y desaparezca el iframe
-            await self._page.wait_for_timeout(5000)
+            await page.wait_for_timeout(5000)
             print("✅ Login procesado.")
 
             # --- NAVEGACIÓN POST-LOGIN ---
@@ -108,32 +114,32 @@ class WinamaxScraper(BaseScraper):
             # 1. Navegar a "En directo"
             print("🏟️ Navegando a la sección 'En directo'...")
             try:
-                live_link = self._page.get_by_role("link", name="En directo")
+                live_link = page.get_by_role("link", name="En directo")
                 await live_link.wait_for(state="visible", timeout=5000)
                 await live_link.click()
             except Exception as e:
                 print(f"❌ Error al navegar a 'En directo': {e}")
-                await self._page.goto(f"{self._base_url}/live")
+                await page.goto(f"{self._base_url}/live")
 
             # 2. Cerrar posibles modales tras la navegación (como el que me pasaste)
             try:
                 # Buscamos el botón "Cerrar" con un timeout corto
-                close_btn = self._page.get_by_role("button", name="Cerrar")
+                close_btn = page.get_by_role("button", name="Cerrar")
                 if await close_btn.is_visible(timeout=3000):
                     print("✖️ Modal post-navegación detectado. Cerrando...")
                     await close_btn.click()
-                    await self._page.wait_for_timeout(1000)
+                    await page.wait_for_timeout(1000)
             except Exception:
                 pass
 
             # 3. Filtrar por Fútbol
             print("⚽ Filtrando por partidos de Fútbol...")
             try:
-                soccer_btn = self._page.get_by_role("button", name="Fútbol")
+                soccer_btn = page.get_by_role("button", name="Fútbol")
                 await soccer_btn.wait_for(state="visible", timeout=5000)
                 await soccer_btn.click()
                 print("✅ Filtro de Fútbol aplicado.")
-                await self._page.wait_for_timeout(1500)
+                await page.wait_for_timeout(1500)
             except Exception as e:
                 print(f"❌ Error al filtrar por Fútbol: {e}")
                 return False
@@ -142,12 +148,13 @@ class WinamaxScraper(BaseScraper):
             
         except Exception as e:
             print(f"❌ Error durante el proceso de login: {e}")
-            await self._page.screenshot(path="debug_error_login.png")
+            await page.screenshot(path="debug_error_login.png")
             return False
 
     async def get_live_matches(self) -> List[ScrapedData]:
         return []
 
     async def close(self) -> None:
-        if self._page:
+        if self._page is not None:
             await self._page.close()
+            self._page = None
