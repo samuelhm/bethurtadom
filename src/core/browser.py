@@ -5,7 +5,7 @@ from src.core.logger import logger
 
 
 class BrowserManager:
-    """Navegador indetectable usando Camoufox (Firefox-based advanced stealth)."""
+    """Gestiona el ciclo de vida del navegador con Camoufox para máxima invisibilidad."""
 
     def __init__(self, headless: bool = False) -> None:
         self.headless = headless
@@ -14,50 +14,54 @@ class BrowserManager:
         self._page: Page | None = None
 
     async def start(self) -> None:
-        """Lanza Camoufox con configuración optimizada para evasión de anti-bots."""
+        """Inicia Camoufox y prepara la página inicial."""
         if not self._browser:
             try:
-                logger.info("🦊 Lanzando Camoufox (API 0.4.11)...")
-                
-                # Inicializamos Camoufox con geoip=True para sincronización automática
+                logger.info("🦊 Lanzando Camoufox (Base Sólida v0.4.11)...")
+
                 self._camoufox = AsyncCamoufox(
                     headless=self.headless,
                     os="windows",
-                    # geoip=True detecta tu IP y ajusta locale/timezone automáticamente
                     geoip=True,
-                    # humanize añade movimientos de ratón realistas
                     humanize=True,
                 )
-                
-                # Iniciamos el navegador y obtenemos el objeto Browser
-                self._browser = await self._camoufox.start()
-                
+
+                # Camoufox.start() devuelve un objeto Browser en tiempo de ejecución.
+                # Añadimos type: ignore para evitar que Pylance marque un error falso de tipado.
+                self._browser = await self._camoufox.start()  # type: ignore
+
                 if self._browser:
-                    # Abrimos la página directamente desde el browser
-                    self._page = await self._browser.new_page()
-                    logger.info("✅ Camoufox se ha iniciado correctamente con GeoIP y Humanize.")
+                    # Creamos un contexto limpio
+                    context = await self._browser.new_context()
+                    self._page = await context.new_page()
+                    logger.info("✅ Camoufox iniciado: Navegador y página listos.")
                 else:
-                    logger.error("❌ El motor de Camoufox no devolvió un objeto Browser.")
-                    
+                    logger.error("❌ El motor de Camoufox no devolvió un navegador válido.")
+
             except Exception as e:
-                logger.error(f"❌ Error crítico al iniciar Camoufox: {e}")
-                self._camoufox = None
+                logger.error(f"❌ Error crítico al iniciar el navegador: {e}")
                 self._browser = None
                 self._page = None
                 raise
 
     async def get_new_page(self) -> Page:
-        """Devuelve la página principal de Camoufox."""
+        """Devuelve la página activa de Camoufox."""
         if not self._page:
             await self.start()
 
         if not self._page:
-            raise RuntimeError("No se pudo obtener la página de Camoufox.")
-        
+            raise RuntimeError("No se pudo obtener la página del navegador.")
+
         return self._page
 
     async def stop(self) -> None:
-        """Cierra el navegador y limpia recursos."""
-        logger.debug("BrowserManager: Cerrando...")
+        """Cierra el navegador y limpia los recursos."""
+        logger.debug("BrowserManager: Cerrando recursos...")
         if self._browser:
-            await self._browser.close()
+            try:
+                await self._browser.close()
+            except Exception as e:
+                logger.debug(f"Error silencioso al cerrar el navegador: {e}")
+            finally:
+                self._browser = None
+                self._page = None

@@ -1,6 +1,8 @@
 import contextlib
-from src.core.logger import logger
+
 from playwright.async_api import Page
+
+from src.core.logger import logger
 
 
 async def handle_cookie_btn(page: Page) -> None:

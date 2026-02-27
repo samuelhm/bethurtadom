@@ -1,5 +1,5 @@
-import os
 import asyncio
+import os
 from pathlib import Path
 
 from src.core.browser import BrowserManager
@@ -29,20 +29,20 @@ class Bet365Scraper(BaseScraper):
 
             logger.info(f"🚀 Cargando Bet365 En Vivo: {self._live_url}")
             await self._page.goto(self._live_url, wait_until="networkidle")
-            
+
             # Esperamos al contenedor principal
-            await self._page.wait_for_selector('.ovm-CompetitionList', timeout=20000)
-            
+            await self._page.wait_for_selector(".ovm-CompetitionList", timeout=20000)
+
             # --- TÉCNICA DE AUTO-SCROLL ---
             logger.info("🖱️ Realizando scroll para cargar todos los partidos...")
-            for _ in range(5): # Hacemos 5 scrolls para cubrir la mayoría de ligas
+            for _ in range(5):  # Hacemos 5 scrolls para cubrir la mayoría de ligas
                 await self._page.mouse.wheel(0, 2000)
-                await asyncio.sleep(1) # Esperamos a que el JS cargue los datos
-            
+                await asyncio.sleep(1)  # Esperamos a que el JS cargue los datos
+
             # Volvemos arriba para que la extracción sea limpia (opcional)
             await self._page.mouse.wheel(0, -10000)
             await asyncio.sleep(0.5)
-            
+
             return True
         except Exception as e:
             logger.error(f"Error al iniciar Bet365: {e}")

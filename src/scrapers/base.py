@@ -11,8 +11,17 @@ class BaseScraper(ABC):
     """
 
     @abstractmethod
+    async def start(self) -> bool:
+        """Inicializa el scraper y prepara la página inicial.
+
+        Returns:
+            bool: True si la inicialización fue exitosa, False en caso contrario.
+        """
+        pass
+
+    @abstractmethod
     async def login(self) -> bool:
-        """Realiza el proceso de login en la web de apuestas.
+        """Realiza el proceso de login en la web de apuestas si es necesario.
 
         Returns:
             bool: True si el login fue exitoso, False en caso contrario.
@@ -20,15 +29,24 @@ class BaseScraper(ABC):
         pass
 
     @abstractmethod
-    async def get_live_matches(self) -> list[MatchInfo]:
-        """Navega por la sección 'En Vivo' y extrae las cuotas de 'Próximo Gol'.
+    async def navigate_to_live(self) -> bool:
+        """Navega a la sección de fútbol 'En Vivo' de la casa de apuestas.
 
         Returns:
-            List[MatchInfo]: Lista de objetos Pydantic con la información básica.
+            bool: True si la navegación fue exitosa, False en caso contrario.
+        """
+        pass
+
+    @abstractmethod
+    async def get_live_matches(self) -> list[MatchInfo]:
+        """Extrae la información de los partidos y sus cuotas.
+
+        Returns:
+            list[MatchInfo]: Lista de objetos Pydantic con la información básica.
         """
         pass
 
     @abstractmethod
     async def close(self) -> None:
-        """Cierra el navegador y limpia los recursos de Playwright."""
+        """Cierra el navegador y limpia los recursos del scraper."""
         pass

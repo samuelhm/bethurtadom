@@ -18,18 +18,18 @@ async def main() -> None:
 
         logger.info("📡 Extrayendo partidos en vivo de Bet365...")
         matches = await scraper.get_live_matches()
-        
+
         if not matches:
             logger.warning("No se encontraron partidos.")
         else:
-            print("\n" + "="*50)
+            print("\n" + "=" * 50)
             print(f"⚽ {len(matches)} PARTIDOS ENCONTRADOS")
-            print("="*50)
+            print("=" * 50)
             for m in matches:
                 time = f"{m.minute}'" if m.minute else "??"
                 print(f"[{time:^5}] {m.home_team} {m.score_home} - {m.score_away} {m.away_team}")
                 print(f"        🏆 {m.competition}")
-            print("="*50 + "\n")
+            print("=" * 50 + "\n")
 
         logger.info("Sesión activa. Pulsa Ctrl+C para salir.")
         await asyncio.Event().wait()

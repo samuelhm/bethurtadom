@@ -13,12 +13,8 @@ logger.debug(
 
 
 async def main() -> None:
-    logger.debug("main: Calling load_dotenv() to read environment variables")
-    load_dotenv()
-
-    logger.debug("main: Setting up project logger with 'INFO' level")
     setup_logger("INFO")
-
+    load_dotenv()
     logger.debug("main: Initializing BrowserManager(headless=False)")
     browser = BrowserManager(headless=False)
 
@@ -52,7 +48,6 @@ async def main() -> None:
                 )
                 if m.match_url:
                     print(f"    🔗 {m.match_url}")
-        await scraper.login()
         logger.debug("main: Hanging execution with asyncio.Event().wait() to keep session alive")
         await asyncio.Event().wait()
     except Exception as e:
