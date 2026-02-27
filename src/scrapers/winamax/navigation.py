@@ -1,13 +1,14 @@
 from playwright.async_api import Page
+
 from src.core.logger import logger
 
 
 async def go_to_live_football(page: Page, base_url: str) -> bool:
     """Navega a la sección 'En directo' y aplica el filtro de 'Fútbol'."""
     try:
-        logger.debug(f"navigation.py: Navigating to {base_url}/live with wait_until='load'")
-        await page.goto(f"{base_url}/live", wait_until="load")
-        
+        logger.debug(f"navigation.py: Navigating to {base_url}/live with wait_until='networkidle'")
+        await page.goto(f"{base_url}/live", wait_until="networkidle")
+
         logger.debug("navigation.py: Clicking at (10, 10) to dismiss any overlays")
         await page.mouse.click(10, 10)
 

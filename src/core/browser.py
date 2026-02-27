@@ -1,26 +1,17 @@
 from playwright.async_api import Browser, BrowserContext, Page, async_playwright
+
 from src.core.logger import logger
 
 
 class BrowserManager:
-    """Gestor central de Playwright para controlar la instancia del navegador.
-
-    Esta clase asegura que no abramos múltiples navegadores innecesariamente
-    y proporciona una interfaz limpia para obtener nuevas páginas.
-    """
-
     def __init__(self, headless: bool = True) -> None:
-        """Inicializa el gestor.
 
-        Args:
-            headless: Si es True, el navegador no será visible.
-        """
         self.headless = headless
         self._pw = None
         self._browser: Browser | None = None
 
     async def start(self) -> None:
-        """Inicia la instancia de Playwright y el navegador."""
+        logger.debug("BrowserManager: Starting Playwright and launching browser")
         if not self._pw:
             self._pw = await async_playwright().start()
             self._browser = await self._pw.chromium.launch(
@@ -29,18 +20,16 @@ class BrowserManager:
             )
 
     async def get_new_page(self) -> Page:
-        """Crea un nuevo contexto y una nueva página.
-
-        Returns:
-            Page: Una nueva pestaña del navegador lista para usar.
-        """
+        logger.debug("BrowserManager: Request received for new page")
         if not self._browser:
             await self.start()
 
         if not self._browser:
             raise RuntimeError("No se pudo iniciar el navegador")
 
-        logger.debug("BrowserManager: Creating new BrowserContext with custom User-Agent and Viewport")
+        logger.debug(
+            "BrowserManager: Creating new BrowserContext with custom User-Agent and Viewport"
+        )
         user_agent = (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
             "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -52,7 +41,7 @@ class BrowserManager:
         return await context.new_page()
 
     async def stop(self) -> None:
-        """Cierra el navegador y limpia Playwright."""
+        logger.debug("BrowserManager: Stopping browser and Playwright")
         if self._browser:
             await self._browser.close()
         if self._pw:

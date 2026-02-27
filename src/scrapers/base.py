@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from src.models.odds import MatchInfo, ScrapedData
+from src.models.odds import MatchInfo
 
 
 class BaseScraper(ABC):
