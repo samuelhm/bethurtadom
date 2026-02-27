@@ -99,9 +99,45 @@ class WinamaxScraper(BaseScraper):
             print("🚀 Enviando formulario final...")
             await login_frame.get_by_role("button", name="Conectarse").click()
             
-            # Esperamos a ver si el login tiene éxito
+            # Esperamos a que el login procese y desaparezca el iframe
             await self._page.wait_for_timeout(5000)
-            print("✅ Proceso de login finalizado.")
+            print("✅ Login procesado.")
+
+            # --- NAVEGACIÓN POST-LOGIN ---
+            
+            # 1. Navegar a "En directo"
+            print("🏟️ Navegando a la sección 'En directo'...")
+            try:
+                live_link = self._page.get_by_role("link", name="En directo")
+                await live_link.wait_for(state="visible", timeout=5000)
+                await live_link.click()
+            except Exception as e:
+                print(f"❌ Error al navegar a 'En directo': {e}")
+                await self._page.goto(f"{self._base_url}/live")
+
+            # 2. Cerrar posibles modales tras la navegación (como el que me pasaste)
+            try:
+                # Buscamos el botón "Cerrar" con un timeout corto
+                close_btn = self._page.get_by_role("button", name="Cerrar")
+                if await close_btn.is_visible(timeout=3000):
+                    print("✖️ Modal post-navegación detectado. Cerrando...")
+                    await close_btn.click()
+                    await self._page.wait_for_timeout(1000)
+            except Exception:
+                pass
+
+            # 3. Filtrar por Fútbol
+            print("⚽ Filtrando por partidos de Fútbol...")
+            try:
+                soccer_btn = self._page.get_by_role("button", name="Fútbol")
+                await soccer_btn.wait_for(state="visible", timeout=5000)
+                await soccer_btn.click()
+                print("✅ Filtro de Fútbol aplicado.")
+                await self._page.wait_for_timeout(1500)
+            except Exception as e:
+                print(f"❌ Error al filtrar por Fútbol: {e}")
+                return False
+
             return True
             
         except Exception as e:
