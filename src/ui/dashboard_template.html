@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="refresh" content="2" />
+  <title>Bethurtadom Live Monitor</title>
+  <link rel="stylesheet" href="src/ui/dashboard.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>Partidos en vivo (Winamax vs Bet365)</h1>
+    <p class="meta">Última actualización: {last_update} · Winamax: {winamax_total} · Bet365: {bet365_total}</p>
+    <table>
+      <thead>
+        <tr>
+          <th>WINAMAX</th>
+          <th class="minute">MIN</th>
+          <th>BET365</th>
+        </tr>
+      </thead>
+      <tbody>
+        {table_rows}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>
