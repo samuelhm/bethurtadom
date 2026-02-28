@@ -1,58 +1,60 @@
 /**
- * Selector de partidos para Winamax.
- * Extrae información básica de fútbol usando anclajes estructurales robustos.
- * 
- * @param {HTMLElement[]} cards - Lista de elementos que coinciden con el selector match-card.
- * @returns {Array} Lista de objetos con la información del partido.
+ * Selector de partidos para Winamax (Versión Infalible).
+ * Extrae información basándose en la estructura del DOM de React Virtualized.
  */
 (cards) => {
     return cards.map(card => {
-        // 1. Equipos: Buscamos las imágenes (logos) de los equipos
-        const icons = Array.from(card.querySelectorAll('img[src*="/icons/"]'));
-        if (icons.length < 3) return null;
+        try {
+            // 1. Obtener el ID y la URL (lo más estable)
+            const matchId = card.getAttribute('data-testid').replace('match-card-', '');
+            const matchUrl = `https://www.winamax.es/apuestas-deportivas/match/${matchId}`;
 
-        const getTeamName = (img) => {
-            const parent = img.closest('div');
-            return parent.parentElement.innerText.trim();
-        };
+            // 2. Extraer nombres de equipos
+            // Los nombres suelen estar en elementos con la clase que termina en 'eiMoqO' 
+            // o simplemente son los textos más largos en la parte izquierda.
+            const teamElements = Array.from(card.querySelectorAll('div'))
+                .filter(el => el.innerText && el.innerText.length > 2 && !el.querySelector('div'));
+            
+            // En Winamax, el primer texto largo es el equipo local y el segundo el visitante
+            // tras filtrar ruidos como "1", "X", "2" o el tiempo.
+            const names = teamElements
+                .map(el => el.innerText.trim())
+                .filter(text => !/^[0-9xX:]+$/.test(text) && text.length > 2);
 
-        const homeTeam = getTeamName(icons[1]);
-        const awayTeam = getTeamName(icons[2]);
+            if (names.length < 2) return null;
 
-        // 2. Marcador e Indicador Live
-        const liveIndicator = card.querySelector('[data-testid="live-indicator"]');
-        if (!liveIndicator) return null;
+            const homeTeam = names[0];
+            const awayTeam = names[1];
 
-        // 3. Tiempo (formato MM:SS)
-        const cardText = card.innerText;
-        const timeMatch = cardText.match(/(\d{1,2}):(\d{2})/);
-        const minute = timeMatch ? parseInt(timeMatch[1]) : null;
+            // 3. Extraer Marcador
+            // Buscamos los números que están cerca del live-indicator
+            const scoreElements = Array.from(card.querySelectorAll('div'))
+                .filter(el => /^\d+$/.test(el.innerText.trim()) && el.innerText.length <= 2);
+            
+            // Los scores suelen ser los dos primeros números pequeños encontrados
+            let scoreHome = 0;
+            let scoreAway = 0;
+            
+            if (scoreElements.length >= 2) {
+                scoreHome = parseInt(scoreElements[0].innerText);
+                scoreAway = parseInt(scoreElements[1].innerText);
+            }
 
-        // 4. Goles
-        let scoreHome = 0;
-        let scoreAway = 0;
-        
-        // Buscamos el contenedor de marcador más cercano al indicador live
-        const scoreContainer = liveIndicator.closest('div').parentElement;
-        const localScores = Array.from(scoreContainer.querySelectorAll('div, span'))
-            .map(el => el.innerText.trim())
-            .filter(t => /^\d+$/.test(t));
+            // 4. Extraer Tiempo (Minuto)
+            const timeSpan = card.querySelector('span');
+            const timeMatch = card.innerText.match(/(\d{1,2}):(\d{2})/);
+            const minute = timeMatch ? parseInt(timeMatch[1]) : null;
 
-        if (localScores.length >= 2) {
-            scoreHome = parseInt(localScores[0]);
-            scoreAway = parseInt(localScores[localScores.length - 1]);
+            return {
+                home_team: homeTeam,
+                away_team: awayTeam,
+                score_home: scoreHome,
+                score_away: scoreAway,
+                minute: minute,
+                match_url: matchUrl
+            };
+        } catch (err) {
+            return null;
         }
-
-        const matchId = card.getAttribute('data-testid').replace('match-card-', '');
-        const matchUrl = `https://www.winamax.es/apuestas-deportivas/match/${matchId}`;
-
-        return {
-            home_team: homeTeam,
-            away_team: awayTeam,
-            score_home: scoreHome,
-            score_away: scoreAway,
-            minute: minute,
-            match_url: matchUrl
-        };
-    }).filter(m => m !== null);
+    }).filter(m => m !== null && m.home_team && m.away_team);
 }

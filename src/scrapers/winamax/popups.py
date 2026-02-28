@@ -8,4 +8,4 @@ async def handle_popups(page: Page) -> None:
         await page.click("#tarteaucitronPersonalize2", timeout=2000)
 
     with contextlib.suppress(Exception):
-        await page.mouse.click(10, 10)
+        await page.mouse.click(10, 150)
