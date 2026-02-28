@@ -1,6 +1,8 @@
-import os
 import asyncio
+import os
 from pathlib import Path
+
+from playwright.async_api import TimeoutError as PlaywrightTimeoutError
 
 from src.core.browser import BrowserManager
 from src.core.logger import logger
@@ -30,7 +32,20 @@ class WinamaxScraper(BaseScraper):
                 self._page = await self.browser_manager.get_new_page()
 
             logger.info(f"🌐 Navegando a Winamax Live: {self._base_url}")
-            await self._page.goto(str(self._base_url), wait_until="networkidle")
+            for attempt in range(1, 3):
+                try:
+                    await self._page.goto(
+                        str(self._base_url), wait_until="domcontentloaded", timeout=8000
+                    )
+                    await self._page.wait_for_timeout(1200)
+                    break
+                except PlaywrightTimeoutError:
+                    logger.warning(
+                        f"Winamax: timeout en goto (intento {attempt}/2), reintentando..."
+                    )
+                    if attempt == 2:
+                        raise
+
             await handle_popups(self._page)
             return True
         except Exception as e:
@@ -38,7 +53,8 @@ class WinamaxScraper(BaseScraper):
             return False
 
     async def login(self) -> bool:
-        if not self._page: return False
+        if not self._page:
+            return False
         try:
             if not self._username or not self._password or not self._birthday:
                 return False
@@ -50,7 +66,8 @@ class WinamaxScraper(BaseScraper):
             return False
 
     async def navigate_to_live(self) -> bool:
-        if not self._page: return False
+        if not self._page:
+            return False
         try:
             # Restauramos el click directo en el botón de Fútbol de la barra lateral/superior
             logger.info("⚽ Seleccionando filtro de fútbol...")
@@ -62,12 +79,12 @@ class WinamaxScraper(BaseScraper):
             return False
 
     async def get_live_matches(self) -> list[MatchInfo]:
-        if not self._page: return []
+        if not self._page:
+            return []
         try:
             await self._page.wait_for_selector('[data-testid^="match-card-"]', timeout=10000)
             matches_data = await self._page.eval_on_selector_all(
-                '[data-testid^="match-card-"]',
-                self._selector_script
+                '[data-testid^="match-card-"]', self._selector_script
             )
             return [MatchInfo(**m) for m in matches_data]
         except Exception as e:
@@ -75,4 +92,5 @@ class WinamaxScraper(BaseScraper):
             return []
 
     async def close(self) -> None:
-        if self._page: await self._page.close()
+        if self._page:
+            await self._page.close()

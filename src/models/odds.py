@@ -4,6 +4,7 @@ from pydantic import BaseModel
 class MatchInfo(BaseModel):
     """Información básica de un partido en vivo."""
 
+    id: int | None = None
     home_team: str
     away_team: str
     match_url: str | None = None

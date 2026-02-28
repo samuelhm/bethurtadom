@@ -18,16 +18,16 @@ class BrowserManager:
         if not self._browser:
             try:
                 logger.info("🦊 Lanzando Camoufox (Resolución Estándar)...")
-                
+
                 self._camoufox = AsyncCamoufox(
                     headless=self.headless,
                     os="windows",
                     geoip=True,
                     humanize=True,
                 )
-                
+
                 self._browser = await self._camoufox.start()  # type: ignore
-                
+
                 if self._browser:
                     # Usamos una resolución estándar de 1080p
                     context = await self._browser.new_context(
@@ -37,7 +37,7 @@ class BrowserManager:
                     logger.info("✅ Camoufox iniciado correctamente.")
                 else:
                     logger.error("❌ El motor de Camoufox no devolvió un navegador válido.")
-                    
+
             except Exception as e:
                 logger.error(f"❌ Error crítico al iniciar el navegador: {e}")
                 self._browser = None
