@@ -42,3 +42,43 @@ def normalize_matches_team_names(
         match.home_team = site_mapping.get(match.home_team, match.home_team)
         match.away_team = site_mapping.get(match.away_team, match.away_team)
     return matches
+
+
+def upsert_match_team_mapping(
+    source_site: str,
+    source_home_team: str,
+    source_away_team: str,
+    canonical_home_team: str,
+    canonical_away_team: str,
+    mappings: dict[str, dict[str, str]],
+) -> bool:
+    """Inserta/actualiza el mapeo de equipos de un partido para un sitio dado."""
+    normalized_site = source_site.lower()
+    site_mapping = mappings.setdefault(normalized_site, {})
+
+    changed = False
+    if site_mapping.get(source_home_team) != canonical_home_team:
+        site_mapping[source_home_team] = canonical_home_team
+        changed = True
+    if site_mapping.get(source_away_team) != canonical_away_team:
+        site_mapping[source_away_team] = canonical_away_team
+        changed = True
+    return changed
+
+
+def save_team_name_mappings(
+    mapping_file: Path,
+    mappings: dict[str, dict[str, str]],
+) -> None:
+    """Guarda en disco el JSON de mapeos de nombres por sitio."""
+    serialized_data: dict[str, dict[str, str]] = {
+        site.lower(): {
+            str(source_name): str(target_name)
+            for source_name, target_name in sorted(site_mapping.items())
+        }
+        for site, site_mapping in sorted(mappings.items())
+    }
+    mapping_file.write_text(
+        json.dumps(serialized_data, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )

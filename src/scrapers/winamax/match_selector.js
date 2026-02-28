@@ -94,6 +94,11 @@
         'en vivo',
         'live',
         'mi apuesta',
+        'descanso',
+        'en curso',
+        'total a domicilio',
+        'total a favor',
+        'total',
     ];
 
     const COMPETITION_HINTS = [
@@ -154,6 +159,25 @@
         return COMPETITION_HINTS.some((hint) => lower.includes(hint));
     };
 
+    const isValidTeamText = (text) => {
+        if (!text) {
+            return false;
+        }
+        if (isNoise(text)) {
+            return false;
+        }
+        if (isCompetitionLine(text)) {
+            return false;
+        }
+        if (!/[\p{L}]/u.test(text)) {
+            return false;
+        }
+        if (text.length < 3) {
+            return false;
+        }
+        return true;
+    };
+
     return cards.map((card) => {
         try {
             const matchId = card.getAttribute('data-testid').replace('match-card-', '');
@@ -177,21 +201,20 @@
 
             const competitionLine = uniqueLines.find((line) => isCompetitionLine(line)) || null;
 
-            const teamCandidates = uniqueLines.filter((line) => {
-                if (isNoise(line)) {
-                    return false;
+            const domTeamCandidates = [];
+            const domTeamNodes = card.querySelectorAll('[class*="gbWBZM"], .ovm-FixtureDetailsTwoWay_TeamName');
+            domTeamNodes.forEach((node) => {
+                const teamText = normalize(node.textContent);
+                if (!isValidTeamText(teamText)) {
+                    return;
                 }
-                if (!/[\p{L}]/u.test(line)) {
-                    return false;
+                if (!domTeamCandidates.includes(teamText)) {
+                    domTeamCandidates.push(teamText);
                 }
-                if (isCompetitionLine(line)) {
-                    return false;
-                }
-                if (line.length < 3) {
-                    return false;
-                }
-                return true;
             });
+
+            const fallbackTeamCandidates = uniqueLines.filter((line) => isValidTeamText(line));
+            const teamCandidates = domTeamCandidates.length >= 2 ? domTeamCandidates : fallbackTeamCandidates;
 
             if (teamCandidates.length < 2) {
                 return null;

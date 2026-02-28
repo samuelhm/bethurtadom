@@ -10,8 +10,8 @@
 - [ ] **Scraping de "Próximo Gol"**: Extraer cuotas de local, visitante y "sin gol".
 
 ### Bet365 🟢
-- [ ] Estructura base del scraper.
-- [ ] Bypass de protecciones iniciales.
+- [x] Estructura base del scraper.
+- [x] Bypass de protecciones iniciales.
 - [ ] Login y navegación.
 
 ### Motor de Detección ⚙️

@@ -3,26 +3,66 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta http-equiv="refresh" content="2" />
   <title>Bethurtadom Live Monitor</title>
   <link rel="stylesheet" href="src/ui/dashboard.css" />
 </head>
-<body>
+<body data-refresh-seconds="{refresh_seconds}" data-view-mode="__VIEW_MODE__">
   <div class="container">
     <h1>Partidos en vivo (Winamax vs Bet365)</h1>
     <p class="meta">Última actualización: {last_update} · Winamax: {winamax_total} · Bet365: {bet365_total}</p>
-    <table>
-      <thead>
-        <tr>
-          <th>WINAMAX</th>
-          <th class="minute">MIN</th>
-          <th>BET365</th>
-        </tr>
-      </thead>
-      <tbody>
-        {table_rows}
-      </tbody>
-    </table>
+
+    <section id="linked-panel" class="panel">
+      <h2>Partidos enlazados ({linked_total})</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>WINAMAX</th>
+            <th class="minute">MIN</th>
+            <th>BET365</th>
+          </tr>
+        </thead>
+        <tbody>
+          {linked_table_rows}
+        </tbody>
+      </table>
+    </section>
+
+    <form id="link-form" class="link-form" action="/api/link" method="post">
+      <label for="winamax-match">Winamax</label>
+      <select id="winamax-match" required>
+        <option value="">Selecciona un partido</option>
+        {winamax_options}
+      </select>
+
+      <label for="bet365-match">Bet365</label>
+      <select id="bet365-match" required>
+        <option value="">Selecciona un partido</option>
+        {bet365_options}
+      </select>
+
+      <button type="submit">Enlazar</button>
+      <span id="link-status" class="link-status"></span>
+    </form>
+    <p id="refresh-state" class="refresh-state"></p>
+
+    <section id="pending-panel" class="panel">
+      <h2>Partidos pendientes ({pending_total})</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>WINAMAX</th>
+            <th class="minute">MIN</th>
+            <th>BET365</th>
+          </tr>
+        </thead>
+        <tbody>
+          {pending_table_rows}
+        </tbody>
+      </table>
+    </section>
   </div>
+  <script id="winamax-matches-data" type="application/json">{winamax_matches_json}</script>
+  <script id="bet365-matches-data" type="application/json">{bet365_matches_json}</script>
+  <script src="src/ui/dashboard.js"></script>
 </body>
 </html>
